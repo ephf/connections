@@ -85,7 +85,7 @@
                             ...el.querySelectorAll("label"),
                         ].map(({ innerHTML }) => innerHTML))),
                     }).then(res => res.json()).then(({ name }) => {
-                        location = `/play.html?c=${name}`;
+                        location = `play.html?c=${name}`;
                     });
                 }
             </script>
