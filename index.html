@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connections</title>
+
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .center {
+            display: grid;
+            place-items: center;
+        }
+    </style>
+</head>
+<body class="center" style="height: 100vh;">
+    <div style="display: flex; flex-direction: column; gap: 2em;">
+        <h2 style="font-weight: 100; font-size: 1em; text-align: center;">Create four groups of four!</h2>
+
+        <script>
+            const colors = [
+                "rgb(249, 223, 109)",
+                "rgb(160, 195, 90)",
+                "rgb(176, 196, 239)",
+                "rgb(186, 129, 197)",
+            ];
+
+            document.currentScript.replaceWith(Object.assign(document.createElement("div"), { innerHTML: `
+                <main style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: .5em;">${
+                    Array.from({ length: 4 }, (_, i) => `
+                        <div style="grid-column: span 4; background: ${colors[i]}; border-radius: 6px; height: 12vw; max-height: 80px;
+                        padding: 6px;" class="category">
+                            <h2 class="center" style="height: 50%; outline: none;" contenteditable>Category ${i + 1}</h2>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: .5em;">
+                                ${Array.from({ length: 4 }, (_, j) => `
+                                    <label style="width: 22vw; height: 6vw; max-width: 150px; max-height: 40px; border: none;
+                                    outline: none; background: rgb(239, 239, 230); font-weight: bold; font-size: 20px;
+                                    text-transform: uppercase; border-radius: 6px; outline: none; cursor: text;"
+                                    class="center" contenteditable>${i * 4 + j}</label>
+                                `).join("")}
+                            </div>
+                        </div>
+                    `).join("")
+                }</main>
+            `}).children[0]);
+        </script>
+
+        <style>
+            .mistake {
+                transition: scale .5s;
+            }
+
+            .mistake:not(.on) {
+                scale: 0;
+            }
+        </style>
+
+        <div style="display: flex; justify-content: center; gap: 1em;" id="control">
+            <style>
+                a {
+                    padding: 15px;
+                    font-size: 16px;
+                    background: black;
+                    color: white;
+                    border-radius: 100px;
+                }
+            </style>
+
+            <script>
+                function view(a, ev) {
+                    ev.preventDefault();
+
+                    fetch("https://connections-dcd9e-default-rtdb.firebaseio.com/games.json", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify([...document.querySelectorAll(".category")].map(el => [
+                            el.querySelector("h2"),
+                            ...el.querySelectorAll("label"),
+                        ].map(({ innerHTML }) => innerHTML))),
+                    }).then(res => res.json()).then(({ name }) => {
+                        location = `/play.html?c=${name}`;
+                    });
+                }
+            </script>
+
+            <a href="#" onclick="view(this, event)" target="_blank">View</a>
+        </div>
+    </div>
+</body>
+</html>

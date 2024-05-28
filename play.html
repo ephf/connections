@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connections</title>
+
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .center {
+            display: grid;
+            place-items: center;
+        }
+    </style>
+</head>
+<body class="center" style="height: 100vh;">
+    <div style="display: flex; flex-direction: column; gap: 2em;">
+        <h2 style="font-weight: 100; font-size: 1em; text-align: center;">Create four groups of four!</h2>
+
+        <style>
+            label {
+                transition: scale .5s, background .2s, color .2s;
+            }
+
+            :checked + label {
+                background: rgb(90, 89, 78) !important;
+                color: white !important;
+            }
+
+            label:active {
+                scale: .9;
+            }
+        </style>
+
+        <script>
+            const c = new URLSearchParams(location.search).get("c");
+            if(!c) location = "/index.html";
+
+            function shuffle(arr, b = 3) {
+                const res = [];
+                while(arr.length) {
+                    if(Math.random() * 2 | 0)
+                        res.push(arr.pop());
+                    else
+                        res.unshift(arr.pop());
+                }
+                return b ? shuffle(res, b - 1) : res;
+            }
+            
+            const s = document.currentScript;
+
+            fetch(`https://connections-dcd9e-default-rtdb.firebaseio.com/games/${c}.json`)
+                .then(res => res.json()).then(data => {
+                    let i = 0;
+                    s.replaceWith(Object.assign(document.createElement("div"), { innerHTML: `
+                        <main style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: .5em;">${
+                            shuffle(data.map(([header, ...values]) => values.map(v => `
+                                <div class="center box" style="width: 22vw; height: 12vw; max-width: 150px; max-height: 80px;">
+                                    <input type="checkbox" id="${i}" style="display: none;" onclick="clickEvent.call(this, event);" />
+                                    <label style="width: 100%; height: 100%; border: none; outline: none; background: rgb(239, 239, 230);
+                                    font-weight: bold; font-size: 20px; text-transform: uppercase; cursor: pointer; border-radius: 6px;
+                                    display: grid; place-items: center;"
+                                    for="${i++}">${v}</label>
+                                </div>
+                            `)).flat()).join("")
+                        }</main>
+                    `}).children[0]);
+
+                    const [ shuf, des, submit ] = document.querySelectorAll("#control > button");
+                    const main = document.querySelector("main");
+
+                    shuf.onclick = () => {
+                        main.append(...shuffle([...main.querySelectorAll(".box")]));
+                    }
+
+                    let n = 0;
+                    des.onclick = () => {
+                        document.querySelectorAll("input:checked").forEach(el => el.checked = false);
+                        n = 0;
+                        des.disabled = true;
+                        submit.disabled = true;
+                    }
+
+                    window.clickEvent = function clickEvent() {
+                        if(n >= 4 && this.checked) {
+                            this.checked = false;
+                            return;
+                        }
+
+                        n += this.checked ? 1 : -1;
+                        des.disabled = n == 0;
+                        submit.disabled = n != 4;
+                    }
+
+                    let lastCorrect = Object.assign(document.createElement("div"), { innerHTML: `
+                        <div style="display: none"></div>
+                    `}).children[0];
+                    main.prepend(lastCorrect);
+
+                    submit.onclick = () => {
+                        const [ head, ...selection ] = document.querySelectorAll("input:checked");
+                        const group = +head.id / 4 | 0;
+
+                        
+                        if(selection.some(({ id }) => (+id / 4 | 0) != group)) {
+                            const mistakes = document.querySelectorAll(".mistake.on");
+
+                            mistakes[mistakes.length - 1].classList.remove("on");
+
+                            if(mistakes.length == 0) {
+                                console.log("Game Over");
+                                return;
+                            }
+
+                            [head, ...selection].forEach(({ id, parentElement }) => parentElement.querySelector(`[for="${id}"]`)
+                                .animate([
+                                    { transform: "translateX(0)" },
+                                    { transform: "translateX(-10px)" },
+                                    { transform: "translateX(10px)" },
+                                    { transform: "translateX(-10px)" },
+                                    { transform: "translateX(0)" },
+                                ], { duration: 500 }));
+                            return;
+                        }
+
+                        const [header, ...values] = data[group];
+                        [head, ...selection].forEach(({ parentElement }) => parentElement.remove());
+                        des.click();
+
+                        const colors = [
+                            "rgb(249, 223, 109)",
+                            "rgb(160, 195, 90)",
+                            "rgb(176, 196, 239)",
+                            "rgb(186, 129, 197)",
+                        ];
+
+                        const el = Object.assign(document.createElement("div"), { innerHTML: `
+                            <div style="grid-column: span 4; height: 12vw; max-height: 80px; display: grid; place-items: center;
+                            border-radius: 6px; background: ${colors[group]}">
+                                <div style="text-align: center; text-transform: uppercase">
+                                    <h2>${header}</h2>
+                                    <p>${values.join(", ")}</p>
+                                </div>
+                            </div>
+                        `}).children[0];
+                        lastCorrect.after(el);
+                        lastCorrect = el;
+                    }
+                });
+        </script>
+
+        <style>
+            .mistake {
+                transition: scale .5s;
+            }
+
+            .mistake:not(.on) {
+                scale: 0;
+            }
+        </style>
+
+        <script>
+            document.currentScript.replaceWith(Object.assign(document.createElement("div"), { innerHTML: `
+                <div style="display: flex; gap: .5em; align-items: center; justify-content: center;">
+                    <p>Mistakes remaining:</p>
+                    
+                    ${Array.from({ length: 10 }, (_, i) => `
+                        <div style="width: 1em; height: 1em; border-radius: 1em; background: rgb(90, 89, 78);" class="mistake on"></div>
+                    `).join("")}
+                </div>
+            `}).children[0])
+        </script>
+
+        <div style="display: flex; justify-content: center; gap: 1em;" id="control">
+            <style>
+                button {
+                    padding: 15px;
+                    font-size: 16px;
+                    border: 1px solid black;
+                    background: none;
+                    outline: none;
+                    border-radius: 100px;
+                }
+
+                button:enabled {
+                    cursor: pointer;
+                }
+
+                button:disabled {
+                    opacity: .4;
+                }
+
+                button#submit:enabled {
+                    background: black;
+                    color: white;
+                }
+            </style>
+
+            <button>Shuffle</button>
+            <button disabled>Deselect all</button>
+            <button disabled id="submit">Submit</button>
+        </div>
+    </div>
+</body>
+</html>
